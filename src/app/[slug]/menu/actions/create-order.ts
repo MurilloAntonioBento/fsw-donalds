@@ -1,6 +1,7 @@
 "use server";
 
 import { ConsumptionMethod } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/prisma";
 
@@ -24,37 +25,38 @@ export const createOrder = async (input: CreateOrderInput) => {
     },
   });
   if (!restaurant) {
-    throw new Error("restaurant not found");
+    throw new Error("Restaurant not found");
   }
-   const productsWithPrices = await db.product.findMany({
+  const productsWithPrices = await db.product.findMany({
     where: {
       id: {
-        in: input.products.map(item => item.id)
+        in: input.products.map((product) => product.id),
       },
     },
-   });
-   const productsWithPricesAndQuantities = input.products.map(product => ({
-            productId: product.id,
-            quantity: product.quantity,
-            price: productsWithPrices.find(p => p.id === product.id)!.price
-          }))
-   await db.order.create({
+  });
+  const productsWithPricesAndQuantities = input.products.map((product) => ({
+    productId: product.id,
+    quantity: product.quantity,
+    price: productsWithPrices.find((p) => p.id === product.id)!.price,
+  }));
+  const order = await db.order.create({
     data: {
-      consumptionMethod: input.consumptionMethod,
-      status: 'PENDING',
-      customerName: removeCpfPunctuation(input.customerCpf),
-      customerCpf: input.customerCpf,
+      status: "PENDING",
+      customerName: input.customerName,
+      customerCpf: removeCpfPunctuation(input.customerCpf),
       orderProducts: {
         createMany: {
-          data:productsWithPricesAndQuantities,
+          data: productsWithPricesAndQuantities,
         },
       },
       total: productsWithPricesAndQuantities.reduce(
         (acc, product) => acc + product.price * product.quantity,
-          0,
-        ),
-        consumptionMethod: input.consumptionMethod,
-        restaurantId: input.restaurant.id,
-      }
-   })
+        0,
+      ),
+      consumptionMethod: input.consumptionMethod,
+      restaurantId: restaurant.id,
+    },
+  });
+  revalidatePath(`/${input.slug}/orders`);
+  return order;
 };

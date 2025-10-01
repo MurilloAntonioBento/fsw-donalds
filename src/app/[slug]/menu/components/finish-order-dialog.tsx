@@ -35,16 +35,20 @@ import { createOrder } from "../actions/create-order";
 import { createStripeCheckout } from "../actions/create-stripe-checkout";
 import { CartContext } from "../contexts/cart";
 import { isValidCpf } from "../helpers/cpf";
-import { ca } from "zod/v4/locales";
-import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, {
     message: "O nome é obrigatório.",
   }),
-  cpf: z.string().refine((value) => isValidCpf(value), {
-    message: "CPF inválido.",
-  })
+  cpf: z
+    .string()
+    .trim()
+    .min(1, {
+      message: "O CPF é obrigatório.",
+    })
+    .refine((value) => isValidCpf(value), {
+      message: "CPF inválido.",
+    }),
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -54,11 +58,11 @@ interface FinishOrderDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
-  const { slug } = useParams<{slug: string}>();
-  const {products} = useContext(CartContext)
+const FinishOrderDialog = ({ open, onOpenChange }: FinishOrderDialogProps) => {
+  const { slug } = useParams<{ slug: string }>();
+  const { products } = useContext(CartContext);
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition()
+  const [isLoading, setIsLoading] = useState(false);
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,25 +70,40 @@ const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
       cpf: "",
     },
     shouldUnregister: true,
-  })
+  });
   const onSubmit = async (data: FormSchema) => {
     try {
-      const consumptionMethod = searchParams.get("consumptionMethod") as ConsumptionMethod;
-      startTransition(async () => {
-        await createOrder({
+      setIsLoading(true);
+      const consumptionMethod = searchParams.get(
+        "consumptionMethod",
+      ) as ConsumptionMethod;
+
+      const order = await createOrder({
         consumptionMethod,
         customerCpf: data.cpf,
         customerName: data.name,
         products,
         slug,
       });
-      onOpenChange(false);
-      toast.success("Pedido finalizado com sucesso!")
-      }
-      
+      const { sessionId } = await createStripeCheckout({
+        products,
+        orderId: order.id,
+        slug,
+        consumptionMethod,
+        cpf: data.cpf,
+      });
+      if (!process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) return;
+      const stripe = await loadStripe(
+        process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY,
+      );
+      stripe?.redirectToCheckout({
+        sessionId: sessionId,
+      });
     } catch (error) {
-      console.error(error)
-    }  
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -153,6 +172,6 @@ const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
       </DrawerContent>
     </Drawer>
   );
-}
- 
+};
+
 export default FinishOrderDialog;
