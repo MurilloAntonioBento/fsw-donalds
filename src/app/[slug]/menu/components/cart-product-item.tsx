@@ -12,7 +12,7 @@ interface CartProductItemProps {
 }
 
 const CartProductItem = ({product}: CartProductItemProps) => {
-  const {decreaseProductQuantity} = useContext(CartContext);
+  const {decreaseProductQuantity, increaseProductQuantity} = useContext(CartContext);
   return ( 
     <div className="flex items-center justify-between">
       {/* ESQUERDA */}
@@ -40,7 +40,7 @@ const CartProductItem = ({product}: CartProductItemProps) => {
             <Button
               className="h-7 w-7 rounded-lg"
               variant="destructive"
-              
+              onClick={() => increaseProductQuantity(product.id)}
             >
               <ChevronRightIcon />
             </Button>
