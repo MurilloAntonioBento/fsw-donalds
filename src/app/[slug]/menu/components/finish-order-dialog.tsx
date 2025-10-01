@@ -35,6 +35,8 @@ import { createOrder } from "../actions/create-order";
 import { createStripeCheckout } from "../actions/create-stripe-checkout";
 import { CartContext } from "../contexts/cart";
 import { isValidCpf } from "../helpers/cpf";
+import { ca } from "zod/v4/locales";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, {
@@ -53,6 +55,10 @@ interface FinishOrderDialogProps {
 }
 
 const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
+  const { slug } = useParams<{slug: string}>();
+  const {products} = useContext(CartContext)
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition()
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -61,9 +67,25 @@ const FinishOrderDialog = ({open, onOpenChange}: FinishOrderDialogProps) => {
     },
     shouldUnregister: true,
   })
-  const onSubmit = (data: FormSchema) => {
-    console.log({data})
-  }
+  const onSubmit = async (data: FormSchema) => {
+    try {
+      const consumptionMethod = searchParams.get("consumptionMethod") as ConsumptionMethod;
+      startTransition(async () => {
+        await createOrder({
+        consumptionMethod,
+        customerCpf: data.cpf,
+        customerName: data.name,
+        products,
+        slug,
+      });
+      onOpenChange(false);
+      toast.success("Pedido finalizado com sucesso!")
+      }
+      
+    } catch (error) {
+      console.error(error)
+    }  
+  };
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerTrigger asChild></DrawerTrigger>
