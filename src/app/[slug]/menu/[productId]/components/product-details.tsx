@@ -26,7 +26,7 @@ interface ProductDetailsProps {
 }
 
 const ProductDetails = ({ product }: ProductDetailsProps) => {
-  const { toggleCart, addProduct } = useContext(CartContext)
+  const { toggleCart, addProduct } = useContext(CartContext);
   const [quantity, setQuantity] = useState<number>(1);
   const handleDecreaseQuantity = () => {
     setQuantity((prev) => {
@@ -44,8 +44,8 @@ const ProductDetails = ({ product }: ProductDetailsProps) => {
       ...product,
       quantity,
     });
-    toggleCart()
-  }
+    toggleCart();
+  };
   return (
     <>
       <div className="relative z-50 mt-[-1.5rem] flex flex-auto flex-col overflow-hidden rounded-t-3xl p-5">

@@ -310,9 +310,7 @@ const main = async () => {
         },
       ],
     });
-  },
-  { timeout: 60000 }
-  );
+  });
 };
 
 main()

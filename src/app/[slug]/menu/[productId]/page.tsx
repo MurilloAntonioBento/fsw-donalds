@@ -11,17 +11,18 @@ interface ProductPageProps {
 
 const ProductPage = async ({ params }: ProductPageProps) => {
   const { slug, productId } = await params;
-
-  const product = await db.product.findUnique({where: {id: productId}, include: {
-    restaurant: {
-      select: {
-        name: true,
-        avatarImageUrl: true,
-        slug: true,
+  const product = await db.product.findUnique({
+    where: { id: productId },
+    include: {
+      restaurant: {
+        select: {
+          name: true,
+          avatarImageUrl: true,
+          slug: true,
+        },
       },
     },
-  },
-})
+  });
   if (!product) {
     return notFound();
   }
@@ -29,11 +30,10 @@ const ProductPage = async ({ params }: ProductPageProps) => {
     return notFound();
   }
   return (
-  <div className="flex h-full flex-col">
-    <ProductHeader product={product}/>
-    <ProductDetails product={product}/>
-  </div>
-    
+    <div className="flex h-full flex-col">
+      <ProductHeader product={product} />
+      <ProductDetails product={product} />
+    </div>
   );
 };
 
